@@ -1,0 +1,19 @@
+<div class="flex justify-center my-8">
+  <button
+    class="bg-indigo-600 text-white px-4 py-2 rounded-l-md hover:bg-indigo-700"
+    (click)="previousPage()"
+    [disabled]="currentPage === 1"
+  >
+    Previous
+  </button>
+
+  <span class="px-4 py-2 bg-gray-100 text-indigo-600">{{ currentPage }}</span>
+
+  <button
+    class="bg-indigo-600 text-white px-4 py-2 rounded-r-md hover:bg-indigo-700"
+    (click)="nextPage()"
+    [disabled]="currentPage === totalPages"
+  >
+    Next
+  </button>
+</div>
