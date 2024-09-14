@@ -1,0 +1,41 @@
+<div class="container mx-auto py-8">
+  <h1 class="text-4xl font-bold text-center mb-6 text-indigo-600">Create New Post</h1>
+
+  <form (ngSubmit)="onSubmit()" class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-6">
+    <!-- Title Field -->
+    <div>
+      <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+      <input
+        id="title"
+        type="text"
+        [(ngModel)]="post.title"
+        name="title"
+        class="w-full mt-1 p-2 border rounded-md focus:ring-indigo-600 focus:border-indigo-600"
+        required
+      />
+    </div>
+
+    <!-- Body Field -->
+    <div>
+      <label for="body" class="block text-sm font-medium text-gray-700">Body</label>
+      <textarea
+        id="body"
+        [(ngModel)]="post.body"
+        name="body"
+        class="w-full mt-1 p-2 border rounded-md focus:ring-indigo-600 focus:border-indigo-600"
+        rows="6"
+        required
+      ></textarea>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-end">
+      <button
+        type="submit"
+        class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
+      >
+        Submit
+      </button>
+    </div>
+  </form>
+</div>
