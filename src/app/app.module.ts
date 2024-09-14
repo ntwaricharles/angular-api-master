@@ -9,6 +9,7 @@ import { CreatePostComponent } from './components/create-post/create-post.compon
 import { EditPostComponent } from './components/edit-post/edit-post.component';
 import { PaginationComponent } from './components/pagination/pagination.component';
 import { HttpClientModule } from '@angular/common/http';
+import { DeleteModalComponent } from './components/delete-modal/delete-modal.component';
 
 @NgModule({
   declarations: [
@@ -17,6 +18,7 @@ import { HttpClientModule } from '@angular/common/http';
     CreatePostComponent,
     EditPostComponent,
     PaginationComponent,
+    DeleteModalComponent,
   ],
   imports: [BrowserModule, AppRoutingModule, FormsModule, HttpClientModule],
   providers: [],

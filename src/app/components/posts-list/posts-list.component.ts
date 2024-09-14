@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ApiClientService } from '../../services/api-client.service';
+import { DeleteModalComponent } from '../delete-modal/delete-modal.component';
 
 @Component({
   selector: 'app-posts-list',
@@ -10,6 +11,8 @@ export class PostsListComponent implements OnInit {
   posts: any[] = [];
   currentPage: number = 1;
   totalPages: number = 10;
+  postIdToDelete: number | null = null;
+  @ViewChild('deleteModal') deleteModal!: DeleteModalComponent;
 
   constructor(private apiClient: ApiClientService) {}
 
@@ -26,19 +29,23 @@ export class PostsListComponent implements OnInit {
       });
   }
 
-  // Confirm delete action
-  confirmDelete(postId: number): void {
-    if (confirm('Are you sure you want to delete this post?')) {
-      this.deletePost(postId);
-    }
+  openDeleteModal(postId: number): void {
+    this.postIdToDelete = postId;
+    this.deleteModal.openModal();
   }
 
-  // Delete post by ID
-  deletePost(postId: number): void {
-    this.apiClient.deletePost(postId).subscribe(() => {
-      alert('Post deleted successfully!');
-      this.loadPosts(); // Reload posts after deletion
-    });
+  cancelDelete(): void {
+    this.postIdToDelete = null;
+    console.log('Delete action canceled');
+  }
+  deletePost(): void {
+    if (this.postIdToDelete !== null) {
+      this.apiClient.deletePost(this.postIdToDelete).subscribe(() => {
+        alert('Post deleted successfully!');
+        this.loadPosts();
+        this.postIdToDelete = null
+      });
+    }
   }
 
   onPageChange(newPage: number): void {

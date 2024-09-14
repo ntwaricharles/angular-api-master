@@ -27,18 +27,4 @@ export class PostDetailComponent implements OnInit {
     });
   }
 
-  // Method to confirm and delete the post
-  confirmDelete(postId: number): void {
-    if (confirm('Are you sure you want to delete this post?')) {
-      this.deletePost(postId);
-    }
-  }
-
-  // Method to delete the post
-  deletePost(postId: number): void {
-    this.apiClient.deletePost(postId).subscribe(() => {
-      alert('Post deleted successfully!');
-      this.router.navigate(['/posts']); // Redirect to posts list after deletion
-    });
-  }
 }

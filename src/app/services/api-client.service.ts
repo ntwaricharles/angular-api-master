@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, retry } from 'rxjs/operators';
+import { environment } from '../../environments/environment.development';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ApiClientService {
-  private API_URL = 'https://jsonplaceholder.typicode.com/';
+  private API_URL = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
