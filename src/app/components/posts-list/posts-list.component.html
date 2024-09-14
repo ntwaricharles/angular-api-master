@@ -1,0 +1,27 @@
+<div class="container mx-auto py-8">
+  <h1 class="text-4xl font-bold text-center mb-6 text-indigo-600">Posts List</h1>
+
+  <div *ngIf="posts.length; else noPosts" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let post of posts" class="bg-white shadow-lg hover:shadow-xl p-6 rounded-md transition-transform transform hover:scale-105">
+      <h2 class="text-xl font-bold mb-2 text-indigo-700">{{ post.title }}</h2>
+      <p class="text-gray-700 mb-4">{{ post.body | slice:0:100 }}...</p>
+      <div class="flex justify-between">
+        <a [routerLink]="['/post', post.id]" class="text-indigo-600 hover:text-indigo-800 underline">Read More</a>
+        <a [routerLink]="['/post/edit', post.id]" class="text-blue-600 hover:text-blue-800 underline">Edit</a>
+        <button (click)="confirmDelete(post.id)" class="text-red-600 hover:text-red-800 underline">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noPosts>
+    <p class="text-center text-gray-500">No posts available.</p>
+  </ng-template>
+</div>
+
+<!-- Pagination -->
+<app-pagination
+  [currentPage]="currentPage"
+  [totalPages]="totalPages"
+  (pageChange)="onPageChange($event)"
+></app-pagination>
+
