@@ -10,6 +10,8 @@ import { ApiClientService } from '../../services/api-client.service';
 export class PostDetailComponent implements OnInit {
   post: any;
   comments: any[] = [];
+  comments$: any;
+  post$: any;
 
   constructor(
     private route: ActivatedRoute,
@@ -19,7 +21,7 @@ export class PostDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const postId = +this.route.snapshot.paramMap.get('id')!;
-    this.apiClient.getPost(postId).subscribe((data) => {
+    this.apiClient.getPostById(postId).subscribe((data) => {
       this.post = data;
     });
     this.apiClient.getPostComments(postId).subscribe((data: any[]) => {
