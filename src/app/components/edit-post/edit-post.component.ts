@@ -8,10 +8,7 @@ import { ApiClientService } from '../../services/api-client.service';
   styleUrls: ['./edit-post.component.css'],
 })
 export class EditPostComponent implements OnInit {
-  post: any = {
-    title: '',
-    body: '',
-  }; // Holds the post data
+  post: any = { title: '', body: '' };
 
   constructor(
     private route: ActivatedRoute,
@@ -21,16 +18,15 @@ export class EditPostComponent implements OnInit {
 
   ngOnInit(): void {
     const postId = +this.route.snapshot.paramMap.get('id')!;
-    this.apiClient.getPost(postId).subscribe((data) => {
-      this.post = data; // Populate the post data in the form
+    this.apiClient.getPostById(postId).subscribe((data) => {
+      this.post = data; // Populate form with post data
     });
   }
 
   onSubmit() {
     const postId = +this.route.snapshot.paramMap.get('id')!;
-    this.apiClient.updatePost(postId, this.post).subscribe(() => {
-      alert('Post updated successfully!');
-      this.router.navigate(['/posts']); // Redirect to posts list after update
+    this.apiClient.updatePostById(postId, this.post).subscribe(() => {
+      this.router.navigate(['/posts']); // Redirect to posts list after updating
     });
   }
 }
