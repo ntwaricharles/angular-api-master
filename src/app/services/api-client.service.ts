@@ -1,60 +1,115 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, retry } from 'rxjs/operators';
+import { catchError, Observable, of, retry, tap, throwError } from 'rxjs';
+import { ErrorHandlingService } from './error-handler.service';
+import { CachingService } from './caching.service';
 import { environment } from '../../environments/environment.development';
+
 
 @Injectable({
   providedIn: 'root',
 })
 export class ApiClientService {
-  private API_URL = environment.apiUrl;
+  private baseUrl = environment.apiUrl;
+  private cacheKey = 'posts';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private cachingService: CachingService,
+    private errorHandlingService: ErrorHandlingService
+  ) {}
 
-  // GET all posts
-  getPosts(page: number = 1, limit: number = 10): Observable<any> {
-    return this.http
-      .get(`${this.API_URL}posts?_page=${page}&_limit=${limit}`)
-      .pipe(retry(3), catchError(this.handleError));
+  // Get posts from cache or API
+  getPosts(currentPage: number, limit: number): Observable<any[]> {
+    const cachedData = this.cachingService.getCache(this.cacheKey);
+    if (cachedData) {
+      return of(cachedData);
+    }
+    return this.getRequest<any[]>('posts').pipe(
+      tap((data) => this.cachingService.setCache(this.cacheKey, data)),
+      this.errorHandlingService.handleRequest<any[]>()
+    );
   }
 
-  // GET single post by ID
-  getPost(id: number): Observable<any> {
-    return this.http
-      .get(`${this.API_URL}posts/${id}`)
-      .pipe(retry(3), catchError(this.handleError));
-  }
-
-  // POST new post
+  // Create a new post and add it to Local Storage or cache
   createPost(post: any): Observable<any> {
-    return this.http
-      .post(`${this.API_URL}posts`, post)
-      .pipe(catchError(this.handleError));
+    const cachedData = this.cachingService.getCache(this.cacheKey) || [];
+    post.id = cachedData.length ? cachedData[cachedData.length - 1].id + 1 : 1;
+    cachedData.push(post);
+    this.cachingService.setCache(this.cacheKey, cachedData); // Update the cache
+    return of(post); // Returning Observable with newly created post
   }
 
-  // PUT update a post
-  updatePost(id: number, post: any): Observable<any> {
-    return this.http
-      .put(`${this.API_URL}posts/${id}`, post)
-      .pipe(catchError(this.handleError));
+  // Get a post by its ID
+  getPostById(id: number): Observable<any> {
+    const cachedData = this.cachingService.getCache(this.cacheKey);
+    if (cachedData) {
+      const post = cachedData.find((item: any) => item.id === id);
+      if (post) {
+        return of(post);
+      }
+    }
+    return this.getRequest<any>(`posts/${id}`).pipe(
+      this.errorHandlingService.handleRequest<any>()
+    );
   }
 
-  // DELETE a post
-  deletePost(id: number): Observable<any> {
-    return this.http
-      .delete(`${this.API_URL}posts/${id}`)
-      .pipe(catchError(this.handleError));
+  // Update a post and update the cache
+  updatePostById(id: number, updatedPost: any): Observable<any> {
+    return this.putRequest<any>(`posts/${id}`, updatedPost).pipe(
+      tap(() => {
+        const cachedData = this.cachingService.getCache(this.cacheKey);
+        if (cachedData) {
+          const index = cachedData.findIndex((post: any) => post.id === id);
+          if (index !== -1) {
+            cachedData[index] = updatedPost;
+            this.cachingService.setCache(this.cacheKey, cachedData);
+          }
+        }
+      }),
+      this.errorHandlingService.handleRequest<any>()
+    );
   }
 
+  // Delete a post and remove it from cache
+  deletePostById(id: number): Observable<any> {
+    return this.deleteRequest<any>(`posts/${id}`).pipe(
+      tap(() => {
+        const cachedData = this.cachingService.getCache(this.cacheKey);
+        if (cachedData) {
+          const updatedCache = cachedData.filter((post: any) => post.id !== id);
+          this.cachingService.setCache(this.cacheKey, updatedCache);
+        }
+      }),
+      this.errorHandlingService.handleRequest<any>()
+    );
+  }
+
+  // Fetch comments for a specific post
   getPostComments(postId: number): Observable<any> {
-    return this.http
-      .get(`${this.API_URL}posts/${postId}/comments`)
-      .pipe(retry(3), catchError(this.handleError));
+    return this.http.get(`${this.baseUrl}posts/${postId}/comments`).pipe(
+      retry(3), // Retry the request up to 3 times if it fails
+      catchError(this.handleError) // Handle errors
+    );
   }
 
-  // Error handler
+  // Helper function for GET requests
+  private getRequest<T>(endpoint: string): Observable<T> {
+    return this.http.get<T>(`${this.baseUrl}/${endpoint}`);
+  }
+
+  // Helper function for PUT requests
+  private putRequest<T>(endpoint: string, body: any): Observable<T> {
+    return this.http.put<T>(`${this.baseUrl}/${endpoint}`, body);
+  }
+
+  // Helper function for DELETE requests
+  private deleteRequest<T>(endpoint: string): Observable<T> {
+    return this.http.delete<T>(`${this.baseUrl}/${endpoint}`);
+  }
+
   private handleError(error: HttpErrorResponse) {
     return throwError(() => new Error('Something went wrong!'));
   }
 }
+
