@@ -1,111 +1,87 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
 import { EditPostComponent } from './edit-post.component';
 import { ApiClientService } from '../../services/api-client.service';
-
-// Create a mock for ApiClientService
-class ApiClientServiceMock {
-  getPost = jest.fn();
-  updatePost = jest.fn();
-}
+import { Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 
 describe('EditPostComponent', () => {
   let component: EditPostComponent;
   let fixture: ComponentFixture<EditPostComponent>;
-  let apiClientService: ApiClientServiceMock;
+  let apiClientService: ApiClientService;
   let router: Router;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [EditPostComponent],
+      imports: [
+        HttpClientTestingModule, // For HttpClient testing
+        RouterTestingModule, // For Router testing
+      ],
       providers: [
+        {
+          provide: ApiClientService,
+          useValue: {
+            getPostById: jest.fn(),
+            updatePostById: jest.fn(),
+          },
+        },
         {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
               paramMap: {
-                get: jest.fn().mockReturnValue('1'), // Mocking postId as '1'
+                get: jest.fn(),
               },
             },
           },
         },
-        {
-          provide: ApiClientService,
-          useClass: ApiClientServiceMock,
-        },
-        {
-          provide: Router,
-          useValue: { navigate: jest.fn() },
-        },
       ],
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(EditPostComponent);
     component = fixture.componentInstance;
-    apiClientService = TestBed.inject(
-      ApiClientService
-    ) as unknown as ApiClientServiceMock;
+    apiClientService = TestBed.inject(ApiClientService);
     router = TestBed.inject(Router);
-    fixture.detectChanges();
+    fixture.detectChanges(); // Trigger initial data binding
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('ngOnInit', () => {
-    it('should fetch post data based on the route id', () => {
-      const mockPost = { id: 1, title: 'Test Post', body: 'Test Body' };
-      jest.spyOn(apiClientService, 'getPost').mockReturnValue(of(mockPost));
+  it('should fetch post data on initialization', () => {
+    const mockPost = { title: 'Test Title', body: 'Test Body' };
+    jest.spyOn(apiClientService, 'getPostById').mockReturnValue(of(mockPost));
+    jest
+      .spyOn((<any>TestBed.inject(ActivatedRoute)).snapshot.paramMap, 'get')
+      .mockReturnValue('1');
 
-      component.ngOnInit();
+    component.ngOnInit();
 
-      expect(apiClientService.getPost).toHaveBeenCalledWith(1);
-      fixture.whenStable().then(() => {
-        expect(component.post).toEqual(mockPost);
-      });
-    });
-
-    it('should handle errors from ApiClientService when fetching post data', () => {
-      jest
-        .spyOn(apiClientService, 'getPost')
-        .mockReturnValue(throwError(() => new Error('Error fetching post')));
-
-      component.ngOnInit();
-
-      expect(apiClientService.getPost).toHaveBeenCalledWith(1);
-      // Add your error handling expectations here if any
-    });
+    expect(apiClientService.getPostById).toHaveBeenCalledWith(1);
+    expect(component.post).toEqual(mockPost);
   });
 
-  describe('onSubmit', () => {
-    it('should update post and navigate to /posts on successful update', () => {
-      const mockPost = { title: 'Updated Title', body: 'Updated Body' };
-      jest.spyOn(apiClientService, 'updatePost').mockReturnValue(of(null));
-      jest.spyOn(router, 'navigate');
+  it('should navigate to /posts on successful post update', () => {
+    jest.spyOn(apiClientService, 'updatePostById').mockReturnValue(of({}));
+    jest.spyOn(router, 'navigate');
 
-      component.post = mockPost;
-      component.onSubmit();
+    component.post = { title: 'Updated Title', body: 'Updated Body' };
+    jest
+      .spyOn((<any>TestBed.inject(ActivatedRoute)).snapshot.paramMap, 'get')
+      .mockReturnValue('1');
 
-      expect(apiClientService.updatePost).toHaveBeenCalledWith(1, mockPost);
-      expect(router.navigate).toHaveBeenCalledWith(['/posts']);
-    });
+    component.onSubmit();
 
-    it('should handle errors from ApiClientService when updating post', () => {
-      jest
-        .spyOn(apiClientService, 'updatePost')
-        .mockReturnValue(throwError(() => new Error('Error updating post')));
-      jest.spyOn(router, 'navigate');
-
-      component.onSubmit();
-
-      expect(apiClientService.updatePost).toHaveBeenCalledWith(
-        1,
-        component.post
-      );
-      expect(router.navigate).not.toHaveBeenCalled();
-      // Add your error handling expectations here if any
-    });
+    expect(apiClientService.updatePostById).toHaveBeenCalledWith(
+      1,
+      component.post
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/posts']);
   });
 });

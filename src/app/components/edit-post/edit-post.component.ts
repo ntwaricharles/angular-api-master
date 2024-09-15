@@ -26,7 +26,7 @@ export class EditPostComponent implements OnInit {
   onSubmit() {
     const postId = +this.route.snapshot.paramMap.get('id')!;
     this.apiClient.updatePostById(postId, this.post).subscribe(() => {
-      this.router.navigate(['/posts']); // Redirect to posts list after updating
+      this.router.navigate(['/posts']); 
     });
   }
 }
