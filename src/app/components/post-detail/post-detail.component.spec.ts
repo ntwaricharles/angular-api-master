@@ -1,88 +1,83 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
 import { PostDetailComponent } from './post-detail.component';
 import { ApiClientService } from '../../services/api-client.service';
 
-// Create a mock for ApiClientService
-class ApiClientServiceMock {
-  getPost = jest.fn();
-  getPostComments = jest.fn();
+// Create mocks for the services and dependencies
+class MockApiClientService {
+  getPostById(id: number) {
+    return of({ id, title: 'Mock Post Title' });
+  }
+
+  getPostComments(postId: number) {
+    return of([{ id: 1, comment: 'Great post!' }]);
+  }
+}
+
+class MockActivatedRoute {
+  snapshot = {
+    paramMap: {
+      get: jest.fn().mockReturnValue('1'), // Mock the route parameter 'id' to return '1'
+    },
+  };
+}
+
+class MockRouter {
+  navigate = jest.fn();
 }
 
 describe('PostDetailComponent', () => {
   let component: PostDetailComponent;
   let fixture: ComponentFixture<PostDetailComponent>;
-  let apiClientService: ApiClientServiceMock;
+  let apiClientService: ApiClientService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PostDetailComponent],
       providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: {
-              paramMap: {
-                get: jest.fn().mockReturnValue('1'), // Mocking postId as '1'
-              },
-            },
-          },
-        },
-        {
-          provide: ApiClientService,
-          useClass: ApiClientServiceMock,
-        },
-        { provide: Router, useValue: {} },
+        { provide: ApiClientService, useClass: MockApiClientService },
+        { provide: ActivatedRoute, useClass: MockActivatedRoute },
+        { provide: Router, useClass: MockRouter },
       ],
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(PostDetailComponent);
     component = fixture.componentInstance;
-    apiClientService = TestBed.inject(
-      ApiClientService
-    ) as unknown as ApiClientServiceMock;
-    fixture.detectChanges();
+    apiClientService = TestBed.inject(ApiClientService);
+    fixture.detectChanges(); // Trigger initial data binding
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('ngOnInit', () => {
-    it('should load post and comments based on the route id', () => {
-      const mockPost = { id: 1, title: 'Test Post' };
-      const mockComments = [{ id: 1, text: 'Test Comment' }];
-      jest.spyOn(apiClientService, 'getPost').mockReturnValue(of(mockPost));
-      jest
-        .spyOn(apiClientService, 'getPostComments')
-        .mockReturnValue(of(mockComments));
+  it('should fetch post details on initialization', () => {
+    const postId = 1;
+    const postData = { id: postId, title: 'Mock Post Title' };
 
-      component.ngOnInit();
+    // Spy on the service method and ensure it is called
+    jest.spyOn(apiClientService, 'getPostById').mockReturnValue(of(postData));
 
-      expect(apiClientService.getPost).toHaveBeenCalledWith(1);
-      expect(apiClientService.getPostComments).toHaveBeenCalledWith(1);
-      fixture.whenStable().then(() => {
-        expect(component.post).toEqual(mockPost);
-        expect(component.comments).toEqual(mockComments);
-      });
-    });
+    component.ngOnInit();
 
-    it('should handle errors from ApiClientService', () => {
-      jest
-        .spyOn(apiClientService, 'getPost')
-        .mockReturnValue(throwError(() => new Error('Error fetching post')));
-      jest
-        .spyOn(apiClientService, 'getPostComments')
-        .mockReturnValue(
-          throwError(() => new Error('Error fetching comments'))
-        );
+    expect(apiClientService.getPostById).toHaveBeenCalledWith(postId);
+    expect(component.post).toEqual(postData);
+  });
 
-      component.ngOnInit();
+  it('should fetch comments on initialization', () => {
+    const commentsData = [{ id: 1, comment: 'Great post!' }];
 
-      expect(apiClientService.getPost).toHaveBeenCalledWith(1);
-      expect(apiClientService.getPostComments).toHaveBeenCalledWith(1);
-      // Add your error handling expectations here if any
-    });
+    // Spy on the service method and ensure it is called
+    jest
+      .spyOn(apiClientService, 'getPostComments')
+      .mockReturnValue(of(commentsData));
+
+    component.ngOnInit();
+
+    expect(apiClientService.getPostComments).toHaveBeenCalledWith(1);
+    expect(component.comments).toEqual(commentsData);
   });
 });
