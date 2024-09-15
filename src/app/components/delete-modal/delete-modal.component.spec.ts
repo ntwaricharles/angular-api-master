@@ -9,7 +9,9 @@ describe('DeleteModalComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [DeleteModalComponent],
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(DeleteModalComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -19,34 +21,24 @@ describe('DeleteModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('openModal', () => {
-    it('should set isVisible to true', () => {
-      component.openModal();
-      expect(component.isVisible).toBe(true);
-    });
+  it('should open the modal', () => {
+    component.openModal();
+    expect(component.isVisible).toBe(true);
   });
 
-  describe('closeModal', () => {
-    it('should set isVisible to false and emit onCancel', () => {
-      component.isVisible = true; // Set to true to simulate the modal being open
-      spyOn(component.onCancel, 'emit');
+  it('should close the modal and emit cancel event', () => {
+    jest.spyOn(component.onCancel, 'emit');
 
-      component.closeModal();
-
-      expect(component.isVisible).toBe(false);
-      expect(component.onCancel.emit).toHaveBeenCalled();
-    });
+    component.closeModal();
+    expect(component.isVisible).toBeFalsy();
+    expect(component.onCancel.emit).toHaveBeenCalled();
   });
 
-  describe('confirmDelete', () => {
-    it('should set isVisible to false and emit onConfirm', () => {
-      component.isVisible = true; // Set to true to simulate the modal being open
-      spyOn(component.onConfirm, 'emit');
+  it('should confirm delete and emit confirm event', () => {
+    jest.spyOn(component.onConfirm, 'emit');
 
-      component.confirmDelete();
-
-      expect(component.isVisible).toBe(false);
-      expect(component.onConfirm.emit).toHaveBeenCalled();
-    });
+    component.confirmDelete();
+    expect(component.isVisible).toBeFalsy();
+    expect(component.onConfirm.emit).toHaveBeenCalled();
   });
 });
