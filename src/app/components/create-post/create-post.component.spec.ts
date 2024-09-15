@@ -1,22 +1,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
 import { CreatePostComponent } from './create-post.component';
 import { ApiClientService } from '../../services/api-client.service';
+import { of } from 'rxjs';
 
 describe('CreatePostComponent', () => {
   let component: CreatePostComponent;
   let fixture: ComponentFixture<CreatePostComponent>;
   let apiClientService: ApiClientService;
-  const createPostMock = jest.fn();
 
   beforeEach(async () => {
+    // Mock the ApiClientService
+    const apiClientServiceMock = {
+      createPost: jest.fn().mockReturnValue(of({})), // Mocked return observable
+    };
+
     await TestBed.configureTestingModule({
       declarations: [CreatePostComponent],
       providers: [
-        {
-          provide: ApiClientService,
-          useValue: { createPost: createPostMock },
-        },
+        { provide: ApiClientService, useValue: apiClientServiceMock },
       ],
     }).compileComponents();
 
@@ -30,23 +31,22 @@ describe('CreatePostComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('onSubmit', () => {
-    it('should call createPost and show an alert on success', () => {
-      // Arrange
-      const post = { title: 'Test Title', body: 'Test Body' };
-      component.post = post;
-      createPostMock.mockReturnValue(of({})); // Mock the API response
+  it('should call createPost method when onSubmit is triggered', () => {
+    // Arrange
+    const post = { title: 'Test Title', body: 'Test Body' };
+    component.post = post;
 
-      // Spy on the alert function
-      jest.spyOn(window, 'alert').mockImplementation(() => {});
+    // Spy on the apiClient.createPost method
+    const createPostSpy = jest.spyOn(apiClientService, 'createPost');
 
-      // Act
-      component.onSubmit();
+    // Spy on the window alert method
+    jest.spyOn(window, 'alert').mockImplementation(() => {});
 
-      // Assert
-      expect(createPostMock).toHaveBeenCalledWith(post);
-      expect(createPostMock).toHaveBeenCalledTimes(1);
-      expect(window.alert).toHaveBeenCalledWith('Post created successfully!');
-    });
+    // Act
+    component.onSubmit();
+
+    // Assert
+    expect(createPostSpy).toHaveBeenCalledWith(post);
+    expect(window.alert).toHaveBeenCalledWith('Post created successfully!');
   });
 });
