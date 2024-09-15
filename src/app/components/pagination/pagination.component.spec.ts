@@ -9,56 +9,59 @@ describe('PaginationComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [PaginationComponent],
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(PaginationComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    fixture.detectChanges(); // Trigger initial data binding
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('previousPage', () => {
-    it('should emit previous page number when currentPage is greater than 1', () => {
-      component.currentPage = 2;
-      component.totalPages = 5;
-      spyOn(component.pageChange, 'emit');
+  it('should emit previous page when previousPage() is called and currentPage > 1', () => {
+    component.currentPage = 2;
+    component.totalPages = 5;
 
-      component.previousPage();
+    spyOn(component.pageChange, 'emit'); // Spy on the pageChange emitter
 
-      expect(component.pageChange.emit).toHaveBeenCalledWith(1);
-    });
+    component.previousPage();
 
-    it('should not emit any event when currentPage is 1', () => {
-      component.currentPage = 1;
-      spyOn(component.pageChange, 'emit');
-
-      component.previousPage();
-
-      expect(component.pageChange.emit).not.toHaveBeenCalled();
-    });
+    expect(component.pageChange.emit).toHaveBeenCalledWith(1); // Should emit page 1
   });
 
-  describe('nextPage', () => {
-    it('should emit next page number when currentPage is less than totalPages', () => {
-      component.currentPage = 2;
-      component.totalPages = 5;
-      spyOn(component.pageChange, 'emit');
+  it('should not emit previous page when previousPage() is called and currentPage is 1', () => {
+    component.currentPage = 1;
+    component.totalPages = 5;
 
-      component.nextPage();
+    spyOn(component.pageChange, 'emit'); // Spy on the pageChange emitter
 
-      expect(component.pageChange.emit).toHaveBeenCalledWith(3);
-    });
+    component.previousPage();
 
-    it('should not emit any event when currentPage is equal to totalPages', () => {
-      component.currentPage = 5;
-      component.totalPages = 5;
-      spyOn(component.pageChange, 'emit');
+    expect(component.pageChange.emit).not.toHaveBeenCalled();
+  });
 
-      component.nextPage();
+  it('should emit next page when nextPage() is called and currentPage < totalPages', () => {
+    component.currentPage = 1;
+    component.totalPages = 5;
 
-      expect(component.pageChange.emit).not.toHaveBeenCalled();
-    });
+    spyOn(component.pageChange, 'emit'); // Spy on the pageChange emitter
+
+    component.nextPage();
+
+    expect(component.pageChange.emit).toHaveBeenCalledWith(2); // Should emit page 2
+  });
+
+  it('should not emit next page when nextPage() is called and currentPage is equal to totalPages', () => {
+    component.currentPage = 5;
+    component.totalPages = 5;
+
+    spyOn(component.pageChange, 'emit'); // Spy on the pageChange emitter
+
+    component.nextPage();
+
+    expect(component.pageChange.emit).not.toHaveBeenCalled();
   });
 });
