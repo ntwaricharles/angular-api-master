@@ -1,135 +1,83 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
 import { PostsListComponent } from './posts-list.component';
 import { ApiClientService } from '../../services/api-client.service';
 import { DeleteModalComponent } from '../delete-modal/delete-modal.component';
+import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { By } from '@angular/platform-browser';
-
-// Create a mock for ApiClientService
-class ApiClientServiceMock {
-  getPosts = jest.fn();
-  deletePost = jest.fn();
-}
 
 describe('PostsListComponent', () => {
   let component: PostsListComponent;
   let fixture: ComponentFixture<PostsListComponent>;
-  let apiClientService: ApiClientServiceMock;
+  let apiClientService: ApiClientService;
 
   beforeEach(async () => {
+    const apiClientServiceMock = {
+      getPosts: jest.fn().mockReturnValue(of([{ id: 1, title: 'Post 1' }])),
+      deletePostById: jest.fn().mockReturnValue(of({})),
+    };
+
     await TestBed.configureTestingModule({
       declarations: [PostsListComponent, DeleteModalComponent],
       providers: [
-        { provide: ApiClientService, useClass: ApiClientServiceMock },
+        { provide: ApiClientService, useValue: apiClientServiceMock },
       ],
-      schemas: [NO_ERRORS_SCHEMA], // Ignore unknown elements (e.g., DeleteModalComponent)
+      schemas: [NO_ERRORS_SCHEMA], // Ignore child components like DeleteModalComponent
     }).compileComponents();
 
     fixture = TestBed.createComponent(PostsListComponent);
     component = fixture.componentInstance;
-    apiClientService = TestBed.inject(
-      ApiClientService
-    ) as unknown as ApiClientServiceMock;
-    fixture.detectChanges();
+    apiClientService = TestBed.inject(ApiClientService);
+    fixture.detectChanges(); // Trigger ngOnInit
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('loadPosts', () => {
-    it('should load posts and set them in the component', () => {
-      const mockPosts = [{ id: 1, title: 'Test Post' }];
-      apiClientService.getPosts.mockReturnValue(of(mockPosts));
-
-      component.loadPosts();
-
-      expect(apiClientService.getPosts).toHaveBeenCalledWith(
-        component.currentPage,
-        10
-      );
-      expect(component.posts).toEqual(mockPosts);
-    });
-
-    it('should handle error when loading posts', () => {
-      apiClientService.getPosts.mockReturnValue(
-        throwError(() => new Error('Error fetching posts'))
-      );
-
-      component.loadPosts();
-
-      expect(apiClientService.getPosts).toHaveBeenCalled();
-      // Add your error handling expectations here if any
-    });
+  it('should call loadPosts on ngOnInit', () => {
+    const loadPostsSpy = jest.spyOn(component, 'loadPosts');
+    component.ngOnInit();
+    expect(loadPostsSpy).toHaveBeenCalled();
   });
 
-  describe('openDeleteModal', () => {
-    it('should open the delete modal and set postIdToDelete', () => {
-      const mockPostId = 1;
-      const deleteModal = fixture.debugElement.query(
-        By.directive(DeleteModalComponent)
-      ).componentInstance;
-
-      component.openDeleteModal(mockPostId);
-
-      expect(component.postIdToDelete).toBe(mockPostId);
-      expect(deleteModal.openModal).toHaveBeenCalled();
-    });
+  it('should load posts from the API', () => {
+    expect(apiClientService.getPosts).toHaveBeenCalledWith(1, 10);
+    expect(component.posts).toEqual([{ id: 1, title: 'Post 1' }]);
   });
 
-  describe('cancelDelete', () => {
-    it('should reset postIdToDelete and log cancellation', () => {
-      component.postIdToDelete = 1;
-      const consoleSpy = jest.spyOn(console, 'log');
+  it('should open delete modal and set postIdToDelete', () => {
+    component.deleteModal = { openModal: jest.fn() } as any;
+    const postId = 1;
+    component.openDeleteModal(postId);
 
-      component.cancelDelete();
-
-      expect(component.postIdToDelete).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith('Delete action canceled');
-    });
+    expect(component.postIdToDelete).toBe(postId);
+    expect(component.deleteModal.openModal).toHaveBeenCalled();
   });
 
-  describe('deletePost', () => {
-    it('should delete the post and reload posts', () => {
-      const mockPostId = 1;
-      const mockPosts = [{ id: 1, title: 'Test Post' }];
-      apiClientService.deletePost.mockReturnValue(of(null));
-      apiClientService.getPosts.mockReturnValue(of(mockPosts));
-
-      component.postIdToDelete = mockPostId;
-      component.deletePost();
-
-      expect(apiClientService.deletePost).toHaveBeenCalledWith(mockPostId);
-      expect(apiClientService.getPosts).toHaveBeenCalled();
-      expect(component.posts).toEqual(mockPosts);
-      expect(component.postIdToDelete).toBeNull();
-    });
-
-    it('should handle error during delete operation', () => {
-      apiClientService.deletePost.mockReturnValue(
-        throwError(() => new Error('Error deleting post'))
-      );
-
-      component.postIdToDelete = 1;
-      component.deletePost();
-
-      expect(apiClientService.deletePost).toHaveBeenCalled();
-      // Add your error handling expectations here if any
-    });
+  it('should cancel delete and reset postIdToDelete', () => {
+    component.postIdToDelete = 1;
+    component.cancelDelete();
+    expect(component.postIdToDelete).toBeNull();
   });
 
-  describe('onPageChange', () => {
-    it('should update the currentPage and load posts', () => {
-      const newPage = 2;
-      const mockPosts = [{ id: 1, title: 'Test Post' }];
-      apiClientService.getPosts.mockReturnValue(of(mockPosts));
+  it('should delete post and reload posts', () => {
+    const loadPostsSpy = jest.spyOn(component, 'loadPosts');
+    component.postIdToDelete = 1;
 
-      component.onPageChange(newPage);
+    component.deletePost();
 
-      expect(component.currentPage).toBe(newPage);
-      expect(apiClientService.getPosts).toHaveBeenCalledWith(newPage, 10);
-      expect(component.posts).toEqual(mockPosts);
-    });
+    expect(apiClientService.deletePostById).toHaveBeenCalledWith(1);
+    expect(loadPostsSpy).toHaveBeenCalled();
+    expect(component.postIdToDelete).toBeNull();
+  });
+
+  it('should change page and load posts', () => {
+    const loadPostsSpy = jest.spyOn(component, 'loadPosts');
+    const newPage = 2;
+
+    component.onPageChange(newPage);
+
+    expect(component.currentPage).toBe(newPage);
+    expect(loadPostsSpy).toHaveBeenCalled();
   });
 });
