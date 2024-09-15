@@ -20,12 +20,14 @@ export class ApiClientService {
   ) {}
 
   // Get posts from cache or API
-  getPosts(currentPage: number, limit: number): Observable<any[]> {
+  getPosts(page: number = 1, limit: number = 10): Observable<any[]> {
     const cachedData = this.cachingService.getCache(this.cacheKey);
     if (cachedData) {
-      return of(cachedData);
+      const startIndex = (page - 1) * limit;
+      const paginatedData = cachedData.slice(startIndex, startIndex + limit);
+      return of(paginatedData);
     }
-    return this.getRequest<any[]>('posts').pipe(
+    return this.getRequest<any[]>(`posts?_page=${page}&_limit=${limit}`).pipe(
       tap((data) => this.cachingService.setCache(this.cacheKey, data)),
       this.errorHandlingService.handleRequest<any[]>()
     );
