@@ -36,14 +36,13 @@ export class PostsListComponent implements OnInit {
 
   cancelDelete(): void {
     this.postIdToDelete = null;
-    console.log('Delete action canceled');
   }
+
   deletePost(): void {
     if (this.postIdToDelete !== null) {
-      this.apiClient.deletePost(this.postIdToDelete).subscribe(() => {
-        alert('Post deleted successfully!');
-        this.loadPosts();
-        this.postIdToDelete = null
+      this.apiClient.deletePostById(this.postIdToDelete).subscribe(() => {
+        this.loadPosts(); // Reload posts after deletion
+        this.postIdToDelete = null;
       });
     }
   }
