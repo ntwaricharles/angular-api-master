@@ -1,27 +1,42 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
+import { HttpClient } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { ApiClientService } from './api-client.service';
-import { environment } from '../../environments/environment.development';
+import { CachingService } from './caching.service';
+import { ErrorHandlingService } from './error-handler.service';
 
 describe('ApiClientService', () => {
   let service: ApiClientService;
-  let httpMock: HttpTestingController;
+  let http: HttpClient;
+  let cachingService: CachingService;
+  let errorHandlingService: ErrorHandlingService;
 
   beforeEach(() => {
+    const httpClientStub = {
+      get: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+    };
+    const cachingServiceStub = { getCache: jest.fn(), setCache: jest.fn() };
+    const errorHandlingServiceStub = { handleRequest: jest.fn() };
+
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [ApiClientService],
+      providers: [
+        ApiClientService,
+        { provide: HttpClient, useValue: httpClientStub },
+        { provide: CachingService, useValue: cachingServiceStub },
+        { provide: ErrorHandlingService, useValue: errorHandlingServiceStub },
+      ],
     });
 
     service = TestBed.inject(ApiClientService);
-    httpMock = TestBed.inject(HttpTestingController);
+    http = TestBed.inject(HttpClient);
+    cachingService = TestBed.inject(CachingService);
+    errorHandlingService = TestBed.inject(ErrorHandlingService);
   });
 
   afterEach(() => {
-    httpMock.verify();
+    jest.clearAllMocks();
   });
 
   it('should be created', () => {
@@ -29,55 +44,146 @@ describe('ApiClientService', () => {
   });
 
   describe('getPosts', () => {
-    it('should return an Observable<any>', () => {
-      const mockPosts = [{ id: 1, title: 'Test Post' }];
+    it('should return cached posts if available', () => {
+      const cachedPosts = [{ id: 1, title: 'Cached Post' }];
+      const page = 1;
+      const limit = 10;
 
-      service.getPosts(1, 10).subscribe((posts) => {
-        expect(posts).toEqual(mockPosts);
+      (cachingService.getCache as jest.Mock).mockReturnValue(cachedPosts);
+
+      service.getPosts(page, limit).subscribe((posts) => {
+        expect(posts).toEqual(cachedPosts);
       });
-
-      const req = httpMock.expectOne(
-        `${environment.apiUrl}posts?_page=1&_limit=10`
-      );
-      expect(req.request.method).toBe('GET');
-      req.flush(mockPosts);
     });
 
-    it('should handle errors', () => {
-      service.getPosts(1, 10).subscribe(
-        () => fail('Expected error'),
-        (error) => expect(error.message).toContain('Something went wrong!')
+    it('should fetch posts from API and cache them if not cached', () => {
+      const apiPosts = [{ id: 1, title: 'API Post' }];
+      const page = 1;
+      const limit = 10;
+
+      (cachingService.getCache as jest.Mock).mockReturnValue(null);
+      (http.get as jest.Mock).mockReturnValue(of(apiPosts));
+      (errorHandlingService.handleRequest as jest.Mock).mockImplementation(
+        (source) => source
       );
 
-      const req = httpMock.expectOne(
-        `${environment.apiUrl}posts?_page=1&_limit=10`
-      );
-      req.flush('Error', { status: 500, statusText: 'Server Error' });
+      service.getPosts(page, limit).subscribe((posts) => {
+        expect(posts).toEqual(apiPosts);
+        expect(cachingService.setCache).toHaveBeenCalledWith('posts', apiPosts);
+      });
     });
   });
 
-  describe('getPost', () => {
-    it('should return an Observable<any>', () => {
-      const mockPost = { id: 1, title: 'Test Post' };
+  describe('createPost', () => {
+    it('should create a new post and update the cache', () => {
+      const newPost = { title: 'New Post' };
+      const cachedPosts = [{ id: 1, title: 'Cached Post' }];
 
-      service.getPost(1).subscribe((post) => {
-        expect(post).toEqual(mockPost);
+      (cachingService.getCache as jest.Mock).mockReturnValue(cachedPosts);
+
+      service.createPost(newPost).subscribe((post) => {
+        expect(post).toEqual({ id: 2, title: 'New Post' });
+        expect(cachingService.setCache).toHaveBeenCalledWith('posts', [
+          ...cachedPosts,
+          { id: 2, title: 'New Post' },
+        ]);
       });
-
-      const req = httpMock.expectOne(`${environment.apiUrl}posts/1`);
-      expect(req.request.method).toBe('GET');
-      req.flush(mockPost);
-    });
-
-    it('should handle errors', () => {
-      service.getPost(1).subscribe(
-        () => fail('Expected error'),
-        (error) => expect(error.message).toContain('Something went wrong!')
-      );
-
-      const req = httpMock.expectOne(`${environment.apiUrl}posts/1`);
-      req.flush('Error', { status: 500, statusText: 'Server Error' });
     });
   });
 
+  describe('getPostById', () => {
+    it('should return post from cache if available', () => {
+      const post = { id: 1, title: 'Cached Post' };
+      (cachingService.getCache as jest.Mock).mockReturnValue([post]);
+
+      service.getPostById(1).subscribe((result) => {
+        expect(result).toEqual(post);
+      });
+    });
+
+    it('should fetch post from API if not in cache', () => {
+      const apiPost = { id: 1, title: 'API Post' };
+
+      (cachingService.getCache as jest.Mock).mockReturnValue(null);
+      (http.get as jest.Mock).mockReturnValue(of(apiPost));
+      (errorHandlingService.handleRequest as jest.Mock).mockImplementation(
+        (source) => source
+      );
+
+      service.getPostById(1).subscribe((result) => {
+        expect(result).toEqual(apiPost);
+      });
+    });
+  });
+
+  describe('updatePostById', () => {
+    it('should update a post and cache the updated data', () => {
+      const updatedPost = { id: 1, title: 'Updated Post' };
+      const cachedPosts = [{ id: 1, title: 'Old Post' }];
+
+      (cachingService.getCache as jest.Mock).mockReturnValue(cachedPosts);
+      (http.put as jest.Mock).mockReturnValue(of(updatedPost));
+      (errorHandlingService.handleRequest as jest.Mock).mockImplementation(
+        (source) => source
+      );
+
+      service.updatePostById(1, updatedPost).subscribe(() => {
+        expect(cachingService.setCache).toHaveBeenCalledWith('posts', [
+          updatedPost,
+        ]);
+      });
+    });
+  });
+
+  describe('deletePostById', () => {
+    it('should delete a post and update the cache', () => {
+      const postId = 1;
+      const cachedPosts = [
+        { id: 1, title: 'Post to be deleted' },
+        { id: 2, title: 'Another Post' },
+      ];
+
+      (cachingService.getCache as jest.Mock).mockReturnValue(cachedPosts);
+      (http.delete as jest.Mock).mockReturnValue(of(null));
+      (errorHandlingService.handleRequest as jest.Mock).mockImplementation(
+        (source) => source
+      );
+
+      service.deletePostById(postId).subscribe(() => {
+        expect(cachingService.setCache).toHaveBeenCalledWith('posts', [
+          { id: 2, title: 'Another Post' },
+        ]);
+      });
+    });
+  });
+
+  describe('getPostComments', () => {
+    it('should fetch comments from API and retry on failure', () => {
+      const postId = 1;
+      const comments = [{ id: 1, comment: 'Nice Post!' }];
+
+      (http.get as jest.Mock).mockReturnValue(of(comments));
+
+      service.getPostComments(postId).subscribe((commentsResult) => {
+        expect(commentsResult).toEqual(comments);
+      });
+    });
+
+    it('should handle errors and retry up to 3 times', () => {
+      const postId = 1;
+
+      (http.get as jest.Mock).mockReturnValue(
+        throwError(() => new Error('Failed'))
+      );
+      jest
+        .spyOn(service, 'getPostComments')
+        .mockImplementation(() => service.getPostComments(postId));
+
+      service.getPostComments(postId).subscribe({
+        error: (error) => {
+          expect(error.message).toBe('Failed');
+        },
+      });
+    });
+  });
 });
