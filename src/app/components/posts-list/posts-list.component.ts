@@ -10,7 +10,9 @@ import { DeleteModalComponent } from '../delete-modal/delete-modal.component';
 export class PostsListComponent implements OnInit {
   posts: any[] = [];
   currentPage: number = 1;
-  totalPages: number = 10;
+  totalPages: number = 1;
+  postsPerPage: number = 10; // Limit posts per page
+  totalPosts: number = 0;
   postIdToDelete: number | null = null;
   @ViewChild('deleteModal') deleteModal!: DeleteModalComponent;
 
@@ -21,11 +23,14 @@ export class PostsListComponent implements OnInit {
   }
 
   loadPosts(): void {
-    const limit = 10;
     this.apiClient
-      .getPosts(this.currentPage, limit)
+      .getPosts(this.currentPage, this.postsPerPage)
       .subscribe((data: any[]) => {
         this.posts = data;
+        this.apiClient.getPosts().subscribe((allPosts: any[]) => {
+          this.totalPosts = allPosts.length; // Get the total number of posts
+          this.totalPages = Math.ceil(this.totalPosts / this.postsPerPage); // Calculate total pages
+        });
       });
   }
 
@@ -49,6 +54,6 @@ export class PostsListComponent implements OnInit {
 
   onPageChange(newPage: number): void {
     this.currentPage = newPage;
-    this.loadPosts();
+    this.loadPosts(); // Load posts for the selected page
   }
 }

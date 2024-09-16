@@ -5,7 +5,6 @@ import { ErrorHandlingService } from './error-handler.service';
 import { CachingService } from './caching.service';
 import { environment } from '../../environments/environment.development';
 
-
 @Injectable({
   providedIn: 'root',
 })
@@ -20,14 +19,17 @@ export class ApiClientService {
   ) {}
 
   // Get posts from cache or API
-  getPosts(page: number, limit: number): Observable<any[]> {
+  getPosts(page?: number, limit?: number): Observable<any[]> {
     const cachedData = this.cachingService.getCache(this.cacheKey);
-    // if (cachedData) {
-    //   const startIndex = (page - 1) * limit;
-    //   const paginatedData = cachedData.slice(startIndex, startIndex + limit);
-    //   return of(paginatedData);
-    // }
-    return this.getRequest<any[]>(`posts?_page=${page}&_limit=${limit}`).pipe(
+    if (cachedData && page && limit) {
+      const startIndex = (page - 1) * limit;
+      const paginatedData = cachedData.slice(startIndex, startIndex + limit);
+      return of(paginatedData);
+    }
+
+    const paginationParams =
+      page && limit ? `?_page=${page}&_limit=${limit}` : '';
+    return this.getRequest<any[]>(`posts${paginationParams}`).pipe(
       tap((data) => this.cachingService.setCache(this.cacheKey, data)),
       this.errorHandlingService.handleRequest<any[]>()
     );
@@ -114,4 +116,3 @@ export class ApiClientService {
     return throwError(() => new Error('Something went wrong!'));
   }
 }
-
