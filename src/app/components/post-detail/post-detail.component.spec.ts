@@ -1,83 +1,95 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
 import { PostDetailComponent } from './post-detail.component';
 import { ApiClientService } from '../../services/api-client.service';
-
-// Create mocks for the services and dependencies
-class MockApiClientService {
-  getPostById(id: number) {
-    return of({ id, title: 'Mock Post Title' });
-  }
-
-  getPostComments(postId: number) {
-    return of([{ id: 1, comment: 'Great post!' }]);
-  }
-}
-
-class MockActivatedRoute {
-  snapshot = {
-    paramMap: {
-      get: jest.fn().mockReturnValue('1'), // Mock the route parameter 'id' to return '1'
-    },
-  };
-}
-
-class MockRouter {
-  navigate = jest.fn();
-}
+import { ActivatedRoute, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 describe('PostDetailComponent', () => {
   let component: PostDetailComponent;
   let fixture: ComponentFixture<PostDetailComponent>;
-  let apiClientService: ApiClientService;
+  let apiClientServiceMock: any;
+  let activatedRouteMock: any;
+  let routerMock: any;
 
   beforeEach(async () => {
+    apiClientServiceMock = {
+      getPostById: jest.fn(),
+      getPostComments: jest.fn(),
+    };
+
+    activatedRouteMock = {
+      snapshot: {
+        paramMap: {
+          get: jest.fn().mockReturnValue('1'), // Assuming postId is 1
+        },
+      },
+    };
+
+    routerMock = {
+      navigate: jest.fn(),
+    };
+
     await TestBed.configureTestingModule({
       declarations: [PostDetailComponent],
       providers: [
-        { provide: ApiClientService, useClass: MockApiClientService },
-        { provide: ActivatedRoute, useClass: MockActivatedRoute },
-        { provide: Router, useClass: MockRouter },
+        { provide: ApiClientService, useValue: apiClientServiceMock },
+        { provide: ActivatedRoute, useValue: activatedRouteMock },
+        { provide: Router, useValue: routerMock },
       ],
     }).compileComponents();
-  });
 
-  beforeEach(() => {
     fixture = TestBed.createComponent(PostDetailComponent);
     component = fixture.componentInstance;
-    apiClientService = TestBed.inject(ApiClientService);
-    fixture.detectChanges(); // Trigger initial data binding
+    fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should fetch post details on initialization', () => {
-    const postId = 1;
-    const postData = { id: postId, title: 'Mock Post Title' };
+  describe('ngOnInit', () => {
+    it('should call getPostById and getPostComments with postId', () => {
+      const mockPost = { title: 'Post Title', body: 'Post Body' };
+      const mockComments = [
+        { id: 1, body: 'Comment 1' },
+        { id: 2, body: 'Comment 2' },
+      ];
 
-    // Spy on the service method and ensure it is called
-    jest.spyOn(apiClientService, 'getPostById').mockReturnValue(of(postData));
+      apiClientServiceMock.getPostById.mockReturnValue(of(mockPost));
+      apiClientServiceMock.getPostComments.mockReturnValue(of(mockComments));
 
-    component.ngOnInit();
+      component.ngOnInit();
 
-    expect(apiClientService.getPostById).toHaveBeenCalledWith(postId);
-    expect(component.post).toEqual(postData);
-  });
+      const postId = +activatedRouteMock.snapshot.paramMap.get('id');
 
-  it('should fetch comments on initialization', () => {
-    const commentsData = [{ id: 1, comment: 'Great post!' }];
+      expect(apiClientServiceMock.getPostById).toHaveBeenCalledWith(postId);
+      expect(apiClientServiceMock.getPostComments).toHaveBeenCalledWith(postId);
+      expect(component.post).toEqual(mockPost);
+      expect(component.comments).toEqual(mockComments);
+    });
 
-    // Spy on the service method and ensure it is called
-    jest
-      .spyOn(apiClientService, 'getPostComments')
-      .mockReturnValue(of(commentsData));
+    it('should handle error during post fetching', () => {
+      apiClientServiceMock.getPostById.mockReturnValue(
+        throwError(() => new Error('Failed to fetch post'))
+      );
 
-    component.ngOnInit();
+      component.ngOnInit();
 
-    expect(apiClientService.getPostComments).toHaveBeenCalledWith(1);
-    expect(component.comments).toEqual(commentsData);
+      expect(apiClientServiceMock.getPostById).toHaveBeenCalled();
+      expect(component.post).toBeUndefined();
+    });
+
+    it('should handle error during comments fetching', () => {
+      const mockPost = { title: 'Post Title', body: 'Post Body' };
+      apiClientServiceMock.getPostById.mockReturnValue(of(mockPost));
+      apiClientServiceMock.getPostComments.mockReturnValue(
+        throwError(() => new Error('Failed to fetch comments'))
+      );
+
+      component.ngOnInit();
+
+      expect(apiClientServiceMock.getPostComments).toHaveBeenCalled();
+      expect(component.comments).toEqual([]);
+    });
   });
 });
