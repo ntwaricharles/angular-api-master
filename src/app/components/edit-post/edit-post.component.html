@@ -2,6 +2,7 @@
   <h1 class="text-3xl font-bold text-center mb-6 text-indigo-600">Edit Post</h1>
 
   <form (ngSubmit)="onSubmit()" class="max-w-lg mx-auto bg-white p-6 rounded-md shadow-md space-y-4">
+    <!-- Title Field -->
     <div>
       <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
       <input
@@ -14,6 +15,7 @@
       />
     </div>
 
+    <!-- Body Field -->
     <div>
       <label for="body" class="block text-sm font-medium text-gray-700">Body</label>
       <textarea
@@ -26,12 +28,26 @@
       ></textarea>
     </div>
 
-    <div class="flex justify-between">
+    <!-- Error and Success Messages -->
+    <div *ngIf="validationError" class="text-red-600">
+      {{ validationError }}
+    </div>
+    <div *ngIf="errorMessage" class="text-red-600">
+      {{ errorMessage }}
+    </div>
+    <div *ngIf="successMessage" class="text-green-600">
+      {{ successMessage }}
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-between items-center">
       <button
         type="submit"
         class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+        [disabled]="loading"
       >
-        Update Post
+        <span *ngIf="loading" class="animate-spin">updating...</span>
+        <span *ngIf="!loading">Update Post</span>
       </button>
       <a [routerLink]="['/posts']" class="text-red-600 hover:text-red-800 underline">Cancel</a>
     </div>

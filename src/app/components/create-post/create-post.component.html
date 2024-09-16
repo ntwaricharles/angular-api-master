@@ -2,7 +2,6 @@
   <h1 class="text-4xl font-bold text-center mb-6 text-indigo-600">Create New Post</h1>
 
   <form (ngSubmit)="onSubmit()" class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-6">
-    <!-- Title Field -->
     <div>
       <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
       <input
@@ -15,7 +14,6 @@
       />
     </div>
 
-    <!-- Body Field -->
     <div>
       <label for="body" class="block text-sm font-medium text-gray-700">Body</label>
       <textarea
@@ -28,14 +26,18 @@
       ></textarea>
     </div>
 
-    <!-- Submit Button -->
+    <div *ngIf="validationError" class="text-red-600">{{ validationError }}</div>
     <div class="flex justify-end">
       <button
         type="submit"
         class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
+        [disabled]="loading"
       >
-        Submit
+        <span *ngIf="!loading">Submit</span>
+        <span *ngIf="loading" class="animate-spin">Submitting...</span>
       </button>
     </div>
-  </form>
+    <div *ngIf="successMessage" class="text-green-600 mt-4">{{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="text-red-600 mt-4">{{ errorMessage }}</div>
+  </form> 
 </div>

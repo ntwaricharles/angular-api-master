@@ -11,7 +11,7 @@ export class PostsListComponent implements OnInit {
   posts: any[] = [];
   currentPage: number = 1;
   totalPages: number = 1;
-  postsPerPage: number = 10; // Limit posts per page
+  postsPerPage: number = 10;
   totalPosts: number = 0;
   postIdToDelete: number | null = null;
   @ViewChild('deleteModal') deleteModal!: DeleteModalComponent;
@@ -27,11 +27,25 @@ export class PostsListComponent implements OnInit {
       .getPosts(this.currentPage, this.postsPerPage)
       .subscribe((data: any[]) => {
         this.posts = data;
+
         this.apiClient.getPosts().subscribe((allPosts: any[]) => {
-          this.totalPosts = allPosts.length; // Get the total number of posts
-          this.totalPages = Math.ceil(this.totalPosts / this.postsPerPage); // Calculate total pages
+          this.totalPosts = allPosts.length;
+          this.totalPages = Math.ceil(this.totalPosts / this.postsPerPage); 
         });
       });
+  }
+
+  // When a new page is selected in the pagination component
+  onPageChange(newPage: number): void {
+    this.currentPage = newPage;
+    this.loadPosts(); 
+  }
+
+  // Method to handle creating a new post and refreshing the view
+  createPost(post: any): void {
+    this.apiClient.createPost(post).subscribe(() => {
+      this.loadPosts(); 
+    });
   }
 
   openDeleteModal(postId: number): void {
@@ -46,14 +60,9 @@ export class PostsListComponent implements OnInit {
   deletePost(): void {
     if (this.postIdToDelete !== null) {
       this.apiClient.deletePostById(this.postIdToDelete).subscribe(() => {
-        this.loadPosts(); // Reload posts after deletion
+        this.loadPosts();
         this.postIdToDelete = null;
       });
     }
-  }
-
-  onPageChange(newPage: number): void {
-    this.currentPage = newPage;
-    this.loadPosts(); // Load posts for the selected page
   }
 }
